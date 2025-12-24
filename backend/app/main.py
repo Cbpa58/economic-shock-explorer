@@ -9,6 +9,10 @@ from app.models.shocks import COVID_SHOCK
 from app.services.fred import fetch_series
 from app.services.interpretation import interpret_unemployment
 
+from app.services.timeseries import slice_timeseries
+from app.models.shocks import COVID_SHOCK
+
+
 
 
 app = FastAPI(title="Economic Shock Explorer API")
@@ -34,4 +38,21 @@ def covid_impact(series_id: str):
         "indicator": series_id,
         "summary": summary,
         "interpretation": interpretation
+    }
+
+@app.get("/chart/{series_id}")
+def chart_data(series_id: str):
+    series_id = series_id.upper()
+
+    df = fetch_series(series_id)
+    df = slice_timeseries(df, start="2015-01-01")
+
+    return {
+        "indicator": series_id,
+        "data": df.to_dict(orient="records"),
+        "shock": {
+            "name": COVID_SHOCK["name"],
+            "start": COVID_SHOCK["start"],
+            "end": COVID_SHOCK["post_end"]
+        }
     }
