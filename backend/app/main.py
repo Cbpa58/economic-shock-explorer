@@ -7,7 +7,8 @@ import pandas as pd
 from app.services.analysis import shock_summary
 from app.models.shocks import COVID_SHOCK
 from app.services.fred import fetch_series
-from app.services.interpretation import interpret_unemployment
+from app.services.interpretation import interpret_unemployment, interpret_cpi
+
 
 from app.services.timeseries import slice_timeseries
 from app.models.shocks import COVID_SHOCK
@@ -32,6 +33,8 @@ def covid_impact(series_id: str):
     interpretation = None
     if series_id == "UNRATE":
         interpretation = interpret_unemployment(summary)
+    elif series_id == "CPIAUCSL":
+        interpretation = interpret_cpi(summary)
 
     return {
         "shock": "COVID-19",
@@ -66,3 +69,5 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
