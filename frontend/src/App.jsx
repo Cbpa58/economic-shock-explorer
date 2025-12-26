@@ -23,7 +23,6 @@ function App() {
         <select value={shock} onChange={e => setShock(e.target.value)}>
           <option value="covid">COVID-19</option>
           <option value="gfc">Financial Crisis</option>
-          <option value="test">Test Shock (Debug)</option>
           <option value="none">No Shock</option>
         </select>
 

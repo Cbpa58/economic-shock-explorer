@@ -28,8 +28,8 @@ export default function IndicatorChart({ seriesId, shock }) {
 
         // 🔍 Slice data ±2 years around the shock for zoom
         if (res.data.shock) {
-          const start = new Date(res.data.shock.start).getTime() - 2 * YEAR;
-          const end = new Date(res.data.shock.end).getTime() + 2 * YEAR;
+          const start = new Date(res.data.shock.start).getTime() - 5 * YEAR;
+          const end = new Date(res.data.shock.end).getTime() + 5 * YEAR;
           processed = processed.filter(d => d.dateNum >= start && d.dateNum <= end);
         }
 
