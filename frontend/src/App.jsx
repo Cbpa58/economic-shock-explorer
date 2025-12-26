@@ -6,24 +6,33 @@ import './App.css'
 import IndicatorChart from "./components/IndicatorChart";
 
 function App() {
+  const [series, setSeries] = useState("UNRATE");
+  const [shock, setShock] = useState("covid");
+
   return (
     <div style={{ padding: "2rem", maxWidth: "1100px", margin: "0 auto" }}>
       <h1>Economic Shock Explorer</h1>
-      <p style={{ marginBottom: "2rem" }}>
-        Exploring how major economic shocks affect key macroeconomic indicators using real-world data.
-      </p>
 
-      <IndicatorChart
-        seriesId="UNRATE"
-        title="US Unemployment Rate"
-      />
+      {/* Controls */}
+      <div style={{ display: "flex", gap: "1rem", marginBottom: "1.5rem" }}>
+        <select value={series} onChange={e => setSeries(e.target.value)}>
+          <option value="UNRATE">Unemployment Rate</option>
+          <option value="CPIAUCSL">Consumer Price Index</option>
+        </select>
 
-      <IndicatorChart
-        seriesId="CPIAUCSL"
-        title="US Consumer Price Index (Inflation)"
-      />
+        <select value={shock} onChange={e => setShock(e.target.value)}>
+          <option value="covid">COVID-19</option>
+          <option value="gfc">Financial Crisis</option>
+          <option value="test">Test Shock (Debug)</option>
+          <option value="none">No Shock</option>
+        </select>
+
+      </div>
+
+      <IndicatorChart seriesId={series} shock={shock} />
     </div>
   );
 }
 
 export default App;
+

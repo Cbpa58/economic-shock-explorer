@@ -10,88 +10,84 @@ import {
   ReferenceArea
 } from "recharts";
 
+const YEAR = 365 * 24 * 60 * 60 * 1000; // milliseconds in a year
 
-
-export default function IndicatorChart({ seriesId, title }) {
+export default function IndicatorChart({ seriesId, shock }) {
   const [data, setData] = useState([]);
-  const [shock, setShock] = useState(null);
+  const [shockMeta, setShockMeta] = useState(null);
   const [interpretation, setInterpretation] = useState(null);
 
   useEffect(() => {
-    // Fetch chart data
-    axios.get(`http://127.0.0.1:8000/chart/${seriesId.toUpperCase()}`)
+    axios
+      .get(`http://127.0.0.1:8000/chart/${seriesId}?shock=${shock}`)
       .then(res => {
-        const formattedData = res.data.data.map(d => ({
+        let processed = res.data.data.map(d => ({
           ...d,
-          date: d.date.slice(0, 10)
+          dateNum: new Date(d.date).getTime()
         }));
-        setData(formattedData);
-        setShock({
-          ...res.data.shock,
-          start: res.data.shock.start,
-          end: res.data.shock.end
-        });
-      });
 
-    // Fetch interpretation
-    axios.get(`http://127.0.0.1:8000/shock/covid/${seriesId.toUpperCase()}`)
-      .then(res => setInterpretation(res.data.interpretation));
+        // 🔍 Slice data ±2 years around the shock for zoom
+        if (res.data.shock) {
+          const start = new Date(res.data.shock.start).getTime() - 2 * YEAR;
+          const end = new Date(res.data.shock.end).getTime() + 2 * YEAR;
+          processed = processed.filter(d => d.dateNum >= start && d.dateNum <= end);
+        }
 
-  }, [seriesId]); // ✅ important: dependency on seriesId
+        setData(processed);
+        setShockMeta(res.data.shock || null);
+      })
+      .catch(console.error);
 
+    if (shock !== "none") {
+      axios
+        .get(`http://127.0.0.1:8000/shock/${shock}/${seriesId}`)
+        .then(res => setInterpretation(res.data.interpretation))
+        .catch(console.error);
+    } else {
+      setInterpretation(null);
+    }
+  }, [seriesId, shock]);
 
+  return (
+    <div style={{ minHeight: "450px", marginBottom: "3rem" }}>
+      <h2>
+        {seriesId === "UNRATE"
+          ? "US Unemployment Rate"
+          : "Consumer Price Index"}
+      </h2>
 
-
-return (
-  <div
-    style={{
-      marginBottom: "4rem",
-      paddingBottom: "2rem",
-      borderBottom: "1px solid #e5e7eb",
-      // 🔑 This ensures the chart has space
-      minHeight: "450px"
-    }}
-  >
-    <h2>{title}</h2>
-
-    <ResponsiveContainer width="100%" height={400}>
-      <LineChart data={data}>
-        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-        <YAxis />
-        <Tooltip />
-
-        {shock && (
-          <ReferenceArea
-            x1={shock.start}
-            x2={shock.end}
-            fill="rgba(255,0,0,0.15)"
+      <ResponsiveContainer width="100%" height={400}>
+        <LineChart data={data}>
+          {/* XAxis auto-scales to dataMin/dataMax */}
+          <XAxis
+            dataKey="dateNum"
+            type="number"
+            scale="time"
+            domain={["dataMin", "dataMax"]}
+            tickFormatter={(ts) => new Date(ts).getFullYear()}
           />
-        )}
+          <YAxis />
+          <Tooltip />
 
-        <Line
-          type="monotone"
-          dataKey="value"
-          strokeWidth={2}
-          dot={false}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+          {/* 🔴 Shock shading */}
+          {shockMeta && (
+            <ReferenceArea
+              x1={new Date(shockMeta.start).getTime()}
+              x2={new Date(shockMeta.end).getTime()}
+              fill="red"
+              fillOpacity={0.25}
+            />
+          )}
 
-    {interpretation && (
-      <p
-        style={{
-          marginTop: "1rem",
-          maxWidth: "720px",
-          lineHeight: "1.6",
-          color: "#374151"
-        }}
-      >
-        <strong>Interpretation:</strong> {interpretation}
-      </p>
-    )}
-  </div>
-);
-
-
-
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke="#2563eb"
+            strokeWidth={2}
+            dot={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }

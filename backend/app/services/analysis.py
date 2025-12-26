@@ -22,3 +22,4 @@ def shock_summary(df: pd.DataFrame, shock: dict):
             "peak": round(post["value"].max(), 2),
         }
     }
+

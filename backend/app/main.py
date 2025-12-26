@@ -1,67 +1,13 @@
-from app.services.fred import fetch_series
-from app.shock_periods import SHOCKS
-from fastapi import FastAPI
-from typing import Optional
-import pandas as pd
-
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from app.services.fred import get_fred_series
 from app.services.analysis import shock_summary
-from app.models.shocks import COVID_SHOCK
-from app.services.fred import fetch_series
+from app.shocks import SHOCKS
 from app.services.interpretation import interpret_unemployment, interpret_cpi
-
-
-from app.services.timeseries import slice_timeseries
-from app.models.shocks import COVID_SHOCK
-
-
-
 
 app = FastAPI(title="Economic Shock Explorer API")
 
-@app.get("/indicator/{series_id}")
-def get_indicator(series_id: str):
-    df = fetch_series(series_id)
-    return df.to_dict(orient="records")
-
-@app.get("/shock/covid/{series_id}")
-def covid_impact(series_id: str):
-    series_id = series_id.upper()  # 🔑 normalize input
-
-    df = fetch_series(series_id)
-    summary = shock_summary(df, COVID_SHOCK)
-
-    interpretation = None
-    if series_id == "UNRATE":
-        interpretation = interpret_unemployment(summary)
-    elif series_id == "CPIAUCSL":
-        interpretation = interpret_cpi(summary)
-
-    return {
-        "shock": "COVID-19",
-        "indicator": series_id,
-        "summary": summary,
-        "interpretation": interpretation
-    }
-
-@app.get("/chart/{series_id}")
-def chart_data(series_id: str):
-    series_id = series_id.upper()
-
-    df = fetch_series(series_id)
-    df = slice_timeseries(df, start="2015-01-01")
-
-    return {
-        "indicator": series_id,
-        "data": df.to_dict(orient="records"),
-        "shock": {
-            "name": COVID_SHOCK["name"],
-            "start": COVID_SHOCK["start"],
-            "end": COVID_SHOCK["post_end"]
-        }
-    }
-
-from fastapi.middleware.cors import CORSMiddleware
-
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -70,4 +16,55 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Endpoints ---
+@app.get("/indicator/{series_id}")
+def get_indicator(series_id: str):
+    df = get_fred_series(series_id.upper())
+    return df.to_dict(orient="records")
 
+@app.get("/shock/{shock}/{series_id}")
+def analyze_shock(shock: str, series_id: str):
+    shock_meta = SHOCKS.get(shock)
+    if not shock_meta:
+        raise HTTPException(status_code=404, detail="Unknown shock")
+
+    df = get_fred_series(series_id.upper())
+
+    # Fix: pass the whole shock dictionary
+    summary = shock_summary(df, shock_meta)
+
+    # Pick interpretation function based on indicator
+    if "UNRATE" in series_id.upper():
+        interpretation = interpret_unemployment(summary)
+    elif "CPI" in series_id.upper():
+        interpretation = interpret_cpi(summary)
+    else:
+        interpretation = "No interpretation available for this series."
+
+    return {
+        "shock": shock,
+        "indicator": series_id.upper(),
+        "summary": summary,
+        "interpretation": interpretation
+    }
+
+@app.get("/chart/{series_id}")
+def get_chart_data(series_id: str, shock: str = "covid"):
+    series_id = series_id.upper()
+    df = get_fred_series(series_id)
+    shock_meta = SHOCKS.get(shock)
+    
+    if not shock_meta:
+        return {"data": df.to_dict("records"), "shock": None}
+
+    # Map to start/end for frontend
+    shading_meta = {
+        "start": shock_meta["post_start"],
+        "end": shock_meta["post_end"],
+        "name": shock.capitalize()  # optional
+    }
+
+    return {
+        "data": df.to_dict("records"),
+        "shock": shading_meta
+    }
