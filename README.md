@@ -6,7 +6,6 @@ An interactive web application that explores how major economic shocks
 ## Features
 - Time-series analysis of macroeconomic data
 - Interactive charts
-- Clear economic interpretation
 
 ## Tech Stack
 - Python (FastAPI, pandas)
@@ -14,4 +13,4 @@ An interactive web application that explores how major economic shocks
 - Public macroeconomic datasets
 
 ## Status
-🚧 In development
+MVP Achieved 
