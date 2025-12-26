@@ -1,24 +1,32 @@
-def interpret_unemployment(summary: dict):
-    delta = summary["post_period"]["mean"] - summary["pre_period"]["mean"]
+def interpret_unemployment(summary):
+    pre = summary["pre_5y"]["mean"]
+    during = summary["during"]["mean"]
+    post = summary["post_5y"]["mean"]
 
-    if delta > 1:
-        direction = "increased sharply"
-    elif delta > 0:
-        direction = "increased moderately"
-    else:
-        direction = "remained stable"
+    delta_during = during - pre
+    delta_post = post - pre
+
+    direction = "increased" if delta_during > 0 else "decreased"
 
     return (
-        f"Average unemployment {direction} following the COVID-19 shock"
+        f"Unemployment {direction} by "
+        f"{abs(round(delta_during, 2))} percentage points during the shock. "
+        f"Five years after the shock, unemployment was "
+        f"{round(delta_post, 2)} points different compared to the pre-shock period."
     )
 
-def interpret_cpi(summary: dict):
-    delta = summary["post_period"]["mean"] - summary["pre_period"]["mean"]
 
-    if delta > 10:
-        return (
-            "Average consumer prices rose significantly following the COVID-19 shock, "
-            "reflecting supply constraints and subsequent demand recovery."
-        )
+def interpret_cpi(summary):
+    pre = summary["pre_5y"]["mean"]
+    during = summary["during"]["mean"]
+    post = summary["post_5y"]["mean"]
 
-    return "Consumer price changes remained relatively contained during the immediate post-COVID period."
+    delta_during = during - pre
+    delta_post = post - pre
+
+    return (
+        f"Inflation changed by "
+        f"{round(delta_during, 2)} points during the shock. "
+        f"Five years after the shock, CPI was "
+        f"{round(delta_post, 2)} points different compared to pre-shock levels."
+    )
